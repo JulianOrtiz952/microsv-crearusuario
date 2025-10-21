@@ -1,0 +1,62 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  customers-ms:
+    build: ./services/customers-ms
+    ports:
+      - "8011:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=customers_ms.settings
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - CUSTOMERS_EXCHANGE=customers
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./services/customers-ms:/app
+
+  loyalty-ms:
+    build: ./services/loyalty-ms
+    environment:
+      - DJANGO_SETTINGS_MODULE=loyalty_ms.settings
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - CUSTOMERS_EXCHANGE=customers
+      - LOYALTY_QUEUE=loyalty.customer.created
+    command: python api/consumer.py
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./services/loyalty-ms:/app
+
+  delivery-ms:
+    build: ./services/delivery-ms
+    environment:
+      - DJANGO_SETTINGS_MODULE=delivery_ms.settings
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - CUSTOMERS_EXCHANGE=customers
+      - DELIVERY_QUEUE=delivery.customer.created
+    command: python api/consumer.py
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./services/delivery-ms:/app
+
+  email-ms:
+    build: ./services/email-ms
+    environment:
+      - DJANGO_SETTINGS_MODULE=email_ms.settings
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - CUSTOMERS_EXCHANGE=customers
+      - EMAIL_QUEUE=email.customer.created
+    command: python api/consumer.py
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./services/email-ms:/app
