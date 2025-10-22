@@ -16,4 +16,3 @@ env/
 # Ignorar microservicios que NO quieres subir
 services/delivery-ms/
 services/email-ms/
-services/loyalty-ms/
