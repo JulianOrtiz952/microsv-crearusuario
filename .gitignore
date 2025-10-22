@@ -12,5 +12,3 @@ env/
 .env
 .env.*
 *.log
-
-# Ignorar microservicios que NO quieres subir
