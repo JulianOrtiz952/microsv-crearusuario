@@ -1,22 +1,73 @@
-from rest_framework.views import APIView
+from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework import status
-from api.serializers import CustomerSerializer
-from api.publisher import publish_customer_created
+from rest_framework.decorators import action
+from .models import Customer
+from .serializers import CustomerSerializer
+from .producer import producer
+import logging
 
-class CustomerCreateListView(APIView):
-    def get(self, request):
-        from api.models import Customer
-        return Response(CustomerSerializer(Customer.objects.all(), many=True).data)
+logger = logging.getLogger(__name__)
 
-    def post(self, request):
-        ser = CustomerSerializer(data=request.data)
-        ser.is_valid(raise_tech=True)  # si usas raise_exception=True
-        customer = ser.save()
-        payload = CustomerSerializer(customer).data
+
+class CustomerViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar clientes
+    Proporciona operaciones CRUD y publica eventos a RabbitMQ
+    """
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
+
+    def create(self, request, *args, **kwargs):
+        """
+        Crea un nuevo cliente y publica evento a RabbitMQ
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Guardar cliente en base de datos
+        customer = serializer.save()
+        
+        # Publicar evento a RabbitMQ de forma asíncrona
         try:
-            publish_customer_created(payload)
+            customer_data = customer.to_dict()
+            producer.publish_customer_created(customer_data)
+            logger.info(f"Cliente creado y evento publicado: {customer.email}")
         except Exception as e:
-            # loguea pero no rompas el 201 (o aplica "outbox pattern" si quieres 100% atómico)
-            print("[publish_customer_created] error:", e)
-        return Response(payload, status=status.HTTP_201_CREATED)
+            logger.error(f"Error publicando evento: {str(e)}")
+            # No fallar la creación si falla la publicación
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers
+        )
+
+    def list(self, request, *args, **kwargs):
+        """
+        Lista todos los clientes
+        """
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data
+        })
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Obtiene un cliente por ID
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def health(self, request):
+        """
+        Endpoint de health check
+        """
+        return Response({
+            'status': 'healthy',
+            'service': 'customers-ms'
+        })

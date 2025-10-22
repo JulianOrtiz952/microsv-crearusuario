@@ -22,6 +22,18 @@ services:
     volumes:
       - ./services/customers-ms:/app
 
+  loyalty-ms-api:
+    build: ./services/loyalty-ms
+    ports:
+      - "8012:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=loyalty_ms.settings
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./services/loyalty-ms:/app
+    command: python manage.py runserver 0.0.0.0:8000
+
   loyalty-ms:
     build: ./services/loyalty-ms
     environment:
@@ -35,6 +47,18 @@ services:
     volumes:
       - ./services/loyalty-ms:/app
 
+  delivery-ms-api:
+    build: ./services/delivery-ms
+    ports:
+      - "8013:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=delivery_ms.settings
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./services/delivery-ms:/app
+    command: python manage.py runserver 0.0.0.0:8000
+
   delivery-ms:
     build: ./services/delivery-ms
     environment:
@@ -47,6 +71,18 @@ services:
       - rabbitmq
     volumes:
       - ./services/delivery-ms:/app
+
+  email-ms-api:
+    build: ./services/email-ms
+    ports:
+      - "8014:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=email_ms.settings
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./services/email-ms:/app
+    command: python manage.py runserver 0.0.0.0:8000
 
   email-ms:
     build: ./services/email-ms

@@ -1,4 +1,0 @@
-Django==4.2.*
-djangorestframework==3.16.*
-gunicorn==23.0.*
-pika==1.3.*

@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Django / SQLite
+db.sqlite3
+*/db.sqlite3
+
+# Entornos / secretos / logs
+env/
+.env
+.env.*
+*.log
+
+# Ignorar microservicios que NO quieres subir
+services/delivery-ms/
+services/email-ms/
+services/loyalty-ms/
